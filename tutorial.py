@@ -73,6 +73,18 @@ def draw(window, background, bg_image, player):
 
     pygame.display.update()     #it needs to be updated to avoid old drawings on the screen
 
+
+def handle_move(player):
+    keys = pygame.key.get_pressed()     #This will catch the key you are pressing in the keyboard
+
+    player.x_vel = 0                    #You need to set the vel on 0, or character will keep moving even if you are not pressing any key.
+    if keys[pygame.K_LEFT]:
+        player.move_left(PLAYER_VEL)
+    if keys[pygame.K_RIGHT]:
+        player.move_right(PLAYER_VEL)
+    
+
+
 def main(window): #Event loop function
     clock = pygame.time.Clock()
     background, bg_image = get_background("Blue.png")       #Getting the image for the background
@@ -87,7 +99,10 @@ def main(window): #Event loop function
             if event.type == pygame.QUIT:
                 run = False
                 break
+
         
+        player.loop(FPS)        #We need to call loop function to keep moving in every frame
+        handle_move(player)
         draw(window, background, bg_image, player)
 
     pygame.quit()
