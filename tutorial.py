@@ -15,6 +15,44 @@ PLAYER_VEL = 5 #Player Velocity
 
 window = pygame.display.set_mode((WIDTH, HEIGHT))   
 
+class Player(pygame.sprite.Sprite):
+    COLOR = (255, 0, 0)
+
+    def __init__ (self, x, y, width, height):       #Initial player properties
+        self.rect = pygame.Rect(x, y, width , height)
+        self.x_vel = 0
+        self.y_vel = 0
+        self.mask = None
+        self.direction = "left"     #I need to know where the sprite is face to. So it will have the correct animation
+        self.animation_count = 0    #The animation needs to be reseted once the sprite changes positions
+
+    def move(self, dx, dy):
+        self.rect.x += dx
+        self.rect.y += dy
+
+    def move_left(self, vel):   #In pygame coordinate 0,0 is top left corner. So to advance to the right you have to add a position
+        self.x_vel = -vel       #If you wanna go left you have to substract a position. Same for Y coordinate, to go down add, to go up substract
+        if self.direction != "left":
+            self.direction = "left"
+            self.animation_count = 0
+
+
+    def move_right(self, vel):
+        self.x_vel = vel
+        if self.direction != "right":
+            self.direction = "right"
+            self.animation_count = 0
+
+    def loop(self, fps):    #This function will be called in every frame (in the "while run loop"), so the character will be uptaded constantly.
+        self.move(self.x_vel, self.y_vel)
+
+    def draw(self, win):
+        pygame.draw.rect(win, self.COLOR, self.rect)
+
+    
+
+
+
 def get_background(name):   #Generating the background
     image = pygame.image.load(join("assets", "Background", name))
     __, __, width, height = image.get_rect()    #width and height of the tiles. (__, __, = x and y).
@@ -27,15 +65,19 @@ def get_background(name):   #Generating the background
 
     return tiles, image
 
-def draw(window, background, bg_image):
+def draw(window, background, bg_image, player):
     for tile in background:
         window.blit(bg_image, tile)       #Drawing the background image, tile by tile
+
+    player.draw(window)
 
     pygame.display.update()     #it needs to be updated to avoid old drawings on the screen
 
 def main(window): #Event loop function
     clock = pygame.time.Clock()
     background, bg_image = get_background("Blue.png")       #Getting the image for the background
+
+    player = Player(100, 100, 50, 50)
     
     run = True
     while run:
@@ -46,7 +88,7 @@ def main(window): #Event loop function
                 run = False
                 break
         
-        draw(window, background, bg_image)
+        draw(window, background, bg_image, player)
 
     pygame.quit()
     quit()
