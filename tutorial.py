@@ -47,6 +47,7 @@ class Player(pygame.sprite.Sprite):
     COLOR = (255, 0, 0)
     GRAVITY = 1
     SPRITES =   load_sprite_sheets("MainCharacters", "NinjaFrog", 32, 32, True)     #We pass both directories with our character sprites, and True to be multidirectional.
+    ANIMATION_DELAY = 3
 
     def __init__ (self, x, y, width, height):       #Initial player properties
         self.rect = pygame.Rect(x, y, width , height)
@@ -67,7 +68,6 @@ class Player(pygame.sprite.Sprite):
             self.direction = "left"
             self.animation_count = 0
 
-
     def move_right(self, vel):
         self.x_vel = vel
         if self.direction != "right":
@@ -79,15 +79,31 @@ class Player(pygame.sprite.Sprite):
         self.move(self.x_vel, self.y_vel)
 
         self.fall_count += 1
+        self.update_sprite()
+    
+    def update_sprite(self):
+        sprite_sheet = "idle"   #Default sprite sheet if we are not doing anything.
+        if self.x_vel != 0:        #If there is some value in x axis, we are running
+            sprite_sheet = "run"
+
+        sprite_sheet_name = sprite_sheet + "_" + self.direction   #We add the direction to know which exact sprite sheet we want.
+        sprites = self.SPRITES[sprite_sheet_name]
+        sprite_index = (self.animation_count // self.ANIMATION_DELAY) % len(sprites)    #It helps to use a different sprite thanks to the amount of frames happening
+        self.sprite = sprites[sprite_index]
+        self.animation_count += 1
+        self.update()
+    
+    def update(self):       #This method is to update the mask to match the sprite
+        self.rect = self.sprite.get_rect(topleft=(self.rect.x, self.rect.y))
+        self.mask = pygame.mask.from_surface(self.sprite)   #it allows pixel perfect collision
+          
 
     def draw(self, win):
         #pygame.draw.rect(win, self.COLOR, self.rect)       #Line of code to draw a rectangle on the screen.
-        self.sprite = self.SPRITES["idle_" + self.direction][0]   #We have to look into the dictionary with the key and select the first frame (0).
+        #self.sprite = self.SPRITES["idle_" + self.direction][0]   #We have to look into the dictionary with the key and select the first frame (0).
         win.blit(self.sprite, (self.rect.x, self.rect.y))   #To draw in the position of the screen
 
     
-
-
 def get_background(name):   #Generating the background
     image = pygame.image.load(join("assets", "Background", name))
     __, __, width, height = image.get_rect()    #width and height of the tiles. (__, __, = x and y).
