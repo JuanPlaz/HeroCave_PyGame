@@ -133,10 +133,10 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.sprite.get_rect(topleft=(self.rect.x, self.rect.y))
         self.mask = pygame.mask.from_surface(self.sprite)   #it allows pixel perfect collision, not rectangle collision.
           
-    def draw(self, win):
+    def draw(self, win, offset_x):
         #pygame.draw.rect(win, self.COLOR, self.rect)       #Line of code to draw a rectangle on the screen.
         #self.sprite = self.SPRITES["idle_" + self.direction][0]   #We have to look into the dictionary with the key and select the first frame (0).
-        win.blit(self.sprite, (self.rect.x, self.rect.y))   #To draw in the position of the screen
+        win.blit(self.sprite, (self.rect.x - offset_x, self.rect.y))   #To draw in the position of the screen
 
 class Object(pygame.sprite.Sprite):
     def __init__(self, x, y, width, height, name=None):
@@ -147,8 +147,8 @@ class Object(pygame.sprite.Sprite):
         self.height = height
         self.name = name
 
-    def draw(self, win):
-        win.blit(self.image, (self.rect.x, self.rect.y))
+    def draw(self, win, offset_x):
+        win.blit(self.image, (self.rect.x - offset_x, self.rect.y))
 
 class Block(Object):
     def __init__(self, x, y, size):
@@ -170,14 +170,14 @@ def get_background(name):   #Generating the background
 
     return tiles, image
 
-def draw(window, background, bg_image, player, objects):
+def draw(window, background, bg_image, player, objects, offset_x):
     for tile in background:
         window.blit(bg_image, tile)       #Drawing the background image, tile by tile
     
     for obj in objects:
-        obj.draw(window)
+        obj.draw(window, offset_x)
 
-    player.draw(window)
+    player.draw(window, offset_x)
     pygame.display.update()     #it needs to be updated to avoid old drawings on the screen
 
 def handle_vertical_collision(player, objects, dy):
@@ -218,6 +218,10 @@ def main(window): #Event loop function
                 #X coordinate position, Bottom of the screen
              for i in range(-WIDTH // block_size, (WIDTH * 2) // block_size)]
                            #Amount of left blocks,  rigth blocks on the floor 
+    
+    offset_x = 0
+    scroll_area_width = 200
+
     run = True
     while run:
         clock.tick(FPS) #Ensure game runs 60 fps
@@ -234,7 +238,11 @@ def main(window): #Event loop function
         
         player.loop(FPS)        #We need to call loop function to keep moving in every frame
         handle_move(player, floor)
-        draw(window, background, bg_image, player, floor)
+        draw(window, background, bg_image, player, floor, offset_x)
+
+        if ((player.rect.right - offset_x >= WIDTH - scroll_area_width) and player.x_vel > 0) or (
+                (player.rect.left - offset_x <= scroll_area_width) and player.x_vel < 0):
+            offset_x += player.x_vel
 
     pygame.quit()
     quit()
