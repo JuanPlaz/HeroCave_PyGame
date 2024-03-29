@@ -85,12 +85,21 @@ class Player(pygame.sprite.Sprite):
             self.animation_count = 0
 
     def loop(self, fps):    #This function will be called in every frame (in the "while run loop"), so the character will be uptaded constantly.
-        #self.y_vel += min(1, (self.fall_count / fps) * self.GRAVITY )   #This is gonna be a "realistic gravity" in the game. After 1 sec (60 frames) we will see the graviity in action.        
+        self.y_vel += min(1, (self.fall_count / fps) * self.GRAVITY )   #This is gonna be a "realistic gravity" in the game. After 1 sec (60 frames) we will see the graviity in action.        
         self.move(self.x_vel, self.y_vel)
 
         self.fall_count += 1
         self.update_sprite()
     
+    def landed(self):
+        self.fall_count = 0     #Usefull to stop adding gravity
+        self.y_vel = 0          #If landed on a block, stop moving the player down
+        self.jupm_count = 0
+
+    def hit_head(self):
+        self.count = 0
+        self.y_vel *= -1    #It will makes bouncing off when hitting an object.
+
     def update_sprite(self):
         sprite_sheet = "idle"   #Default sprite sheet if we are not doing anything.
         if self.x_vel != 0:        #If there is some value in x axis, we are running
@@ -152,10 +161,24 @@ def draw(window, background, bg_image, player, objects):
         obj.draw(window)
 
     player.draw(window)
-
     pygame.display.update()     #it needs to be updated to avoid old drawings on the screen
 
-def handle_move(player):
+def handle_vertical_collision(player, objects, dy):
+    collide_objetcs = []
+    for obj in objects:
+        if pygame.sprite.collide_mask(player, obj): #This will tells if the objects are colliding
+            if dy > 0:      #if displacement greater than 0 (player is falling) 
+                player.rect.bottom = obj.rect.top   #Do the feet player position, the top of the object player is colling with.
+                player.landed() #To land on a block
+            elif dy < 0:    #if displacement smaller than 0 (player is jumping) 
+                player.rect.top = obj.rect.bottom   #Do the top of player position, the bottom of the object player is colliding with.
+                player.hit_head()   #To hit a block
+        
+        collide_objetcs.append(obj)
+    
+    return collide_objetcs
+
+def handle_move(player, objects):
     keys = pygame.key.get_pressed()     #This will catch the key you are pressing in the keyboard
 
     player.x_vel = 0                    #You need to set the vel on 0, or character will keep moving even if you are not pressing any key.
@@ -163,6 +186,8 @@ def handle_move(player):
         player.move_left(PLAYER_VEL)
     if keys[pygame.K_RIGHT]:
         player.move_right(PLAYER_VEL)
+
+    handle_vertical_collision(player, objects, player.y_vel)
 
 
 def main(window): #Event loop function
@@ -186,7 +211,7 @@ def main(window): #Event loop function
                 break
         
         player.loop(FPS)        #We need to call loop function to keep moving in every frame
-        handle_move(player)
+        handle_move(player, floor)
         draw(window, background, bg_image, player, floor)
 
     pygame.quit()
