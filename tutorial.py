@@ -67,6 +67,15 @@ class Player(pygame.sprite.Sprite):
         self.direction = "left"     #I need to know where the sprite is face to. So it will have the correct animation
         self.animation_count = 0    #The animation needs to be reseted once the sprite changes positions
         self.fall_count = 0
+        self.jump_count = 0
+
+    def jump(self):
+        self.y_vel = -self.GRAVITY * 8      #it is negative to substract from Y axis and jump in the air. Then, gravity will take player down.
+        self.animation_count = 0            #reset the animation in the sprite sheet
+        self.jump_count += 1                #variable to allow a double jump
+        if self.jump_count == 1:            #If player jumped in a range of 1 second after,
+            self.fall_count = 0             #Gravity is reseted.
+        
 
     def move(self, dx, dy):
         self.rect.x += dx
@@ -94,7 +103,7 @@ class Player(pygame.sprite.Sprite):
     def landed(self):
         self.fall_count = 0     #Usefull to stop adding gravity
         self.y_vel = 0          #If landed on a block, stop moving the player down
-        self.jupm_count = 0
+        self.jump_count = 0
 
     def hit_head(self):
         self.count = 0
@@ -102,7 +111,15 @@ class Player(pygame.sprite.Sprite):
 
     def update_sprite(self):
         sprite_sheet = "idle"   #Default sprite sheet if we are not doing anything.
-        if self.x_vel != 0:        #If there is some value in x axis, we are running
+ 
+        if self.y_vel < 0:
+            if self.jump_count == 1:
+                sprite_sheet = "jump"
+            elif self.jump_count == 2:
+                sprite_sheet = "double_jump"
+        elif self.y_vel > self.GRAVITY * 2:     #Patch to avoid glitching between the 2 states, falling, and idle.
+            sprite_sheet = "fall"
+        elif self.x_vel != 0:        #If there is some value in x axis, we are running
             sprite_sheet = "run"
 
         sprite_sheet_name = sprite_sheet + "_" + self.direction   #We add the direction to know which exact sprite sheet we want.
@@ -209,6 +226,11 @@ def main(window): #Event loop function
             if event.type == pygame.QUIT:
                 run = False
                 break
+
+            if event.type == pygame.KEYDOWN:        #Event of pressing and releasing a key in the keyboard.
+                if event.key == pygame.K_SPACE and player.jump_count < 2:   #Allows double jumping
+                    player.jump()
+
         
         player.loop(FPS)        #We need to call loop function to keep moving in every frame
         handle_move(player, floor)
