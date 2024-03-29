@@ -15,11 +15,11 @@ PLAYER_VEL = 5 #Player Velocity
 
 window = pygame.display.set_mode((WIDTH, HEIGHT))   
 
-def flip(sprites):      #We need to flip the sprites in all the animations when they are facing left.
+def flip(sprites):      #To flip the sprites in all the animations when they are facing left.
     return [pygame.transform.flip(sprite, True, False) for sprite in sprites]     #True, False, to split only in x axis, not in y.    
 
 def load_sprite_sheets(dir1, dir2, width, height, direction=False):     #Directory 1 and 2 to load more images. Measures of the images, and we dont need to load multiple directions "False"
-    path = join("assets", dir1, dir2)   #The path of the images we are gonna be loading
+    path = join("assets", dir1, dir2)   #The path of the images to be loading
     images = [f for f in listdir(path) if isfile(join(path, f))]    #It is gonna load any file inside the path directory
 
     all_sprites = {}    #key will be "animation style" and the value is all of the images in that animation
@@ -40,16 +40,26 @@ def load_sprite_sheets(dir1, dir2, width, height, direction=False):     #Directo
         else:
             all_sprites[image.replace(".png", "")] = sprites
 
-    return all_sprites      #This block of code will load our sprite sheets.
+    return all_sprites      #This previous block of code will load our sprite sheets.
+
+def get_block(size):        #Getting the sprites of the block from our files, we decide the size.
+    path = join("assets", "Terrain", "Terrain.png")
+    image = pygame.image.load(path).convert_alpha()     #We get a transparent background
+    surface = pygame.Surface((size, size),pygame.SRCALPHA, 32)  #To create an image of the size of the block
+    rect = pygame.Rect(96, 0, size, size)       #(96,0) is the position that I want to load the image from in the selected sprite sheet.
+    surface.blit(image, (0,0), rect)        #To take the image from the path and draw it on the position 0,0 of the background (using the rect one).
+
+    return pygame.transform.scale2x(surface)
 
 
 class Player(pygame.sprite.Sprite):
     COLOR = (255, 0, 0)
     GRAVITY = 1
-    SPRITES =   load_sprite_sheets("MainCharacters", "NinjaFrog", 32, 32, True)     #We pass both directories with our character sprites, and True to be multidirectional.
+    SPRITES =   load_sprite_sheets("MainCharacters", "NinjaFrog", 32, 32, True)   #We pass both directories with our character sprites, and True to be multidirectional.
     ANIMATION_DELAY = 3
 
     def __init__ (self, x, y, width, height):       #Initial player properties
+        super().__init__()
         self.rect = pygame.Rect(x, y, width , height)
         self.x_vel = 0
         self.y_vel = 0
@@ -93,15 +103,33 @@ class Player(pygame.sprite.Sprite):
         self.animation_count += 1
         self.update()
     
-    def update(self):       #This method is to update the mask to match the sprite
+    def update(self):       #This method is to update the mask to match the sprite and allows to have a perfect collision.
         self.rect = self.sprite.get_rect(topleft=(self.rect.x, self.rect.y))
-        self.mask = pygame.mask.from_surface(self.sprite)   #it allows pixel perfect collision
+        self.mask = pygame.mask.from_surface(self.sprite)   #it allows pixel perfect collision, not rectangle collision.
           
-
     def draw(self, win):
         #pygame.draw.rect(win, self.COLOR, self.rect)       #Line of code to draw a rectangle on the screen.
         #self.sprite = self.SPRITES["idle_" + self.direction][0]   #We have to look into the dictionary with the key and select the first frame (0).
         win.blit(self.sprite, (self.rect.x, self.rect.y))   #To draw in the position of the screen
+
+class Object(pygame.sprite.Sprite):
+    def __init__(self, x, y, width, height, name=None):
+        super().__init__()
+        self.rect = pygame.Rect(x, y, width, height)
+        self.image = pygame.Surface((width, height), pygame.SRCALPHA)   #Helps support transparent images
+        self.width = width
+        self.height = height
+        self.name = name
+
+    def draw(self, win):
+        win.blit(self.image, (self.rect.x, self.rect.y))
+
+class Block(Object):
+    def __init__(self, x, y, size):
+        super().__init__(x, y, size, size)
+        block = get_block(size)
+        self.image.blit(block, (0,0))
+        self.mask = pygame.mask.from_surface(self.image)
 
     
 def get_background(name):   #Generating the background
@@ -116,9 +144,12 @@ def get_background(name):   #Generating the background
 
     return tiles, image
 
-def draw(window, background, bg_image, player):
+def draw(window, background, bg_image, player, objects):
     for tile in background:
         window.blit(bg_image, tile)       #Drawing the background image, tile by tile
+    
+    for obj in objects:
+        obj.draw(window)
 
     player.draw(window)
 
@@ -133,12 +164,18 @@ def handle_move(player):
     if keys[pygame.K_RIGHT]:
         player.move_right(PLAYER_VEL)
 
+
 def main(window): #Event loop function
     clock = pygame.time.Clock()
     background, bg_image = get_background("Blue.png")       #Getting the image for the background
 
+    block_size = 96
+
     player = Player(100, 100, 50, 50)
-    
+    floor = [Block(i * block_size, HEIGHT - block_size, block_size)
+                #X coordinate position, Bottom of the screen
+             for i in range(-WIDTH // block_size, (WIDTH * 2) // block_size)]
+                           #Amount of left blocks,  rigth blocks on the floor 
     run = True
     while run:
         clock.tick(FPS) #Ensure game runs 60 fps
@@ -150,7 +187,7 @@ def main(window): #Event loop function
         
         player.loop(FPS)        #We need to call loop function to keep moving in every frame
         handle_move(player)
-        draw(window, background, bg_image, player)
+        draw(window, background, bg_image, player, floor)
 
     pygame.quit()
     quit()
