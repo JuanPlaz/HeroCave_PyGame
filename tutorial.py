@@ -9,7 +9,7 @@ pygame.init() #Initialize pygame module
 pygame.display.set_caption("Heroe Cave") #Set the caption at the top of the window
 
 ##BG_COLOR = (255, 255, 255) #Initial Background color, no needed after setting tiles drawing 
-WIDTH, HEIGHT = 950, 750
+WIDTH, HEIGHT = 900, 750
 FPS = 60 #Frames per second
 PLAYER_VEL = 5 #Player Velocity
 
@@ -157,6 +157,36 @@ class Block(Object):
         self.image.blit(block, (0,0))
         self.mask = pygame.mask.from_surface(self.image)
 
+class Fire(Object):
+    ANIMATION_DELAY = 3
+
+    def __init__(self, x, y, width, height):
+        super().__init__(x, y, width, height, "fire")
+        self.fire = load_sprite_sheets("Traps", "Fire", width, height)
+        self.image = self.fire["off"][0]        #0 is first sprite in the sprite sheet "off"
+        self.mask = pygame.mask.from_surface(self.image)
+        self.animation_count = 0
+        self.animation_name = "off"
+    
+    def on(self):
+        self.animation_name = "on"
+
+    def off(self):
+        self.animation_name = "off"
+
+    def loop(self):
+        sprites = self.fire[self.animation_name]        #Get the sprite sheet of fire
+        sprite_index = (self.animation_count // self.ANIMATION_DELAY) % len(sprites)    #It helps to use a different sprite thanks to the amount of frames happening
+        self.image = sprites[sprite_index]
+        self.animation_count += 1
+
+        self.rect = self.image.get_rect(topleft=(self.rect.x, self.rect.y))    #updating the rect
+        self.mask = pygame.mask.from_surface(self.image)   #it allows pixel perfect collision, not rectangle collision.
+        
+        if self.animation_count // self.ANIMATION_DELAY > len(sprites):     #"animation_count" needs to be reset to avoid unstoppable increase of the value and lagging the game
+            self.animation_count = 0 
+
+
     
 def get_background(name):   #Generating the background
     image = pygame.image.load(join("assets", "Background", name))
@@ -230,12 +260,14 @@ def main(window): #Event loop function
     block_size = 96
 
     player = Player(100, 100, 50, 50)
+    fire = Fire(100, HEIGHT - block_size - 64, 16, 32)  #The last 16, and 32 are the dimensions of the single sprite. Remember "y" axis is positive by going down, and negative going up.
+    fire.on()
     floor = [Block(i * block_size, HEIGHT - block_size, block_size)
                 #X coordinate position, Bottom of the screen
              for i in range(-WIDTH // block_size, (WIDTH * 2) // block_size)]
                            #Amount of left blocks,  rigth blocks on the floor 
     objects = [*floor, Block(0, HEIGHT - block_size * 2, block_size),
-               Block(block_size * 3, HEIGHT - block_size * 4, block_size)]
+               Block(block_size * 3, HEIGHT - block_size * 4, block_size), fire]
     
     offset_x = 0
     scroll_area_width = 200
@@ -255,6 +287,7 @@ def main(window): #Event loop function
 
         
         player.loop(FPS)        #We need to call loop function to keep moving in every frame
+        fire.loop()
         handle_move(player, objects)
         draw(window, background, bg_image, player, objects, offset_x)
 
