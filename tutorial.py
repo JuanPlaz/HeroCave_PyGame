@@ -68,6 +68,8 @@ class Player(pygame.sprite.Sprite):
         self.animation_count = 0    #The animation needs to be reseted once the sprite changes positions
         self.fall_count = 0
         self.jump_count = 0
+        self.hit = False
+        self.hit_count = 0
 
     def jump(self):
         self.y_vel = -self.GRAVITY * 8      #it is negative to substract from Y axis and jump in the air. Then, gravity will take player down.
@@ -76,10 +78,13 @@ class Player(pygame.sprite.Sprite):
         if self.jump_count == 1:            #If player jumped in a range of 1 second after,
             self.fall_count = 0             #Gravity is reseted.
         
-
     def move(self, dx, dy):
         self.rect.x += dx
         self.rect.y += dy
+
+    def make_hit(self):
+        self.hit = True
+        self.hit_count = 0
 
     def move_left(self, vel):   #In pygame coordinate 0,0 is top left corner. So to advance to the right you have to add a position
         self.x_vel = -vel       #If you wanna go left you have to substract a position. Same for Y coordinate, to go down add, to go up substract
@@ -97,6 +102,11 @@ class Player(pygame.sprite.Sprite):
         self.y_vel += min(1, (self.fall_count / fps) * self.GRAVITY )   #This is gonna be a "realistic gravity" in the game. After 1 sec (60 frames) we will see the graviity in action.        
         self.move(self.x_vel, self.y_vel)
 
+        if self.hit:
+            self.hit_count += 1
+        if self.hit_count > fps * 2:        #This would be 2 seconds.
+            self.hit = False
+
         self.fall_count += 1
         self.update_sprite()
     
@@ -111,8 +121,10 @@ class Player(pygame.sprite.Sprite):
 
     def update_sprite(self):
         sprite_sheet = "idle"   #Default sprite sheet if we are not doing anything.
- 
-        if self.y_vel < 0:
+
+        if self.hit:
+            sprite_sheet = "hit" 
+        elif self.y_vel < 0:
             if self.jump_count == 1:
                 sprite_sheet = "jump"
             elif self.jump_count == 2:
@@ -187,7 +199,6 @@ class Fire(Object):
             self.animation_count = 0 
 
 
-    
 def get_background(name):   #Generating the background
     image = pygame.image.load(join("assets", "Background", name))
     __, __, width, height = image.get_rect()    #width and height of the tiles. (__, __, = x and y).
@@ -221,7 +232,7 @@ def handle_vertical_collision(player, objects, dy):
                 player.rect.top = obj.rect.bottom   #Do the top of player position, the bottom of the object player is colliding with.
                 player.hit_head()   #To hit a block
         
-        collide_objetcs.append(obj)
+            collide_objetcs.append(obj)
     
     return collide_objetcs
 
@@ -250,7 +261,11 @@ def handle_move(player, objects):
     if keys[pygame.K_RIGHT] and not collide_right:  #Checking is player is able to move rigth
         player.move_right(PLAYER_VEL)
 
-    handle_vertical_collision(player, objects, player.y_vel)
+    vertical_collide = handle_vertical_collision(player, objects, player.y_vel)
+    to_check = [collide_right, collide_left, *vertical_collide]
+    for obj in to_check:
+        if obj and obj.name == "fire":
+            player.make_hit()
 
 
 def main(window): #Event loop function
