@@ -107,7 +107,7 @@ class Player(pygame.sprite.Sprite):
 
     def hit_head(self):
         self.count = 0
-        self.y_vel *= -1    #It will makes bouncing off when hitting an object.
+        self.y_vel *= -1    #It will make bouncing off when hitting an object.
 
     def update_sprite(self):
         sprite_sheet = "idle"   #Default sprite sheet if we are not doing anything.
@@ -183,7 +183,7 @@ def draw(window, background, bg_image, player, objects, offset_x):
 def handle_vertical_collision(player, objects, dy):
     collide_objetcs = []
     for obj in objects:
-        if pygame.sprite.collide_mask(player, obj): #This will tells if the objects are colliding
+        if pygame.sprite.collide_mask(player, obj): #This will tell if the objects are colliding
             if dy > 0:      #if displacement greater than 0 (player is falling) 
                 player.rect.bottom = obj.rect.top   #Do the feet player position, the top of the object player is colling with.
                 player.landed() #To land on a block
@@ -195,13 +195,29 @@ def handle_vertical_collision(player, objects, dy):
     
     return collide_objetcs
 
+def collide(player, objects, dx):
+    player.move(dx, 0)          #Move the player
+    player.update()             #Updating the mask
+    collided_object = None
+    for obj in objects:         #Checking if the player will collide with something,
+        if pygame.sprite.collide_mask(player, obj): #If it will move in that direction 
+            collided_object = obj
+            break
+    
+    player.move(-dx, 0)     #player is moved back to the previous position. This is to prevent to move into the block.
+    player.update()         #update the mask again
+    return collided_object
+
 def handle_move(player, objects):
     keys = pygame.key.get_pressed()     #This will catch the key you are pressing in the keyboard
 
     player.x_vel = 0                    #You need to set the vel on 0, or character will keep moving even if you are not pressing any key.
-    if keys[pygame.K_LEFT]:
+    collide_left = collide(player, objects, -PLAYER_VEL * 2)
+    collide_right = collide(player, objects, PLAYER_VEL * 2)
+
+    if keys[pygame.K_LEFT] and not collide_left:    #Checking is player is able to move left based on current position
         player.move_left(PLAYER_VEL)
-    if keys[pygame.K_RIGHT]:
+    if keys[pygame.K_RIGHT] and not collide_right:  #Checking is player is able to move rigth
         player.move_right(PLAYER_VEL)
 
     handle_vertical_collision(player, objects, player.y_vel)
@@ -218,6 +234,8 @@ def main(window): #Event loop function
                 #X coordinate position, Bottom of the screen
              for i in range(-WIDTH // block_size, (WIDTH * 2) // block_size)]
                            #Amount of left blocks,  rigth blocks on the floor 
+    objects = [*floor, Block(0, HEIGHT - block_size * 2, block_size),
+               Block(block_size * 3, HEIGHT - block_size * 4, block_size)]
     
     offset_x = 0
     scroll_area_width = 200
@@ -237,10 +255,10 @@ def main(window): #Event loop function
 
         
         player.loop(FPS)        #We need to call loop function to keep moving in every frame
-        handle_move(player, floor)
-        draw(window, background, bg_image, player, floor, offset_x)
+        handle_move(player, objects)
+        draw(window, background, bg_image, player, objects, offset_x)
 
-        if ((player.rect.right - offset_x >= WIDTH - scroll_area_width) and player.x_vel > 0) or (
+        if ((player.rect.right - offset_x >= WIDTH - scroll_area_width) and player.x_vel > 0) or (  #setting the offset, once the player is close to a boundary, the system will redraw allthe objects on a new position
                 (player.rect.left - offset_x <= scroll_area_width) and player.x_vel < 0):
             offset_x += player.x_vel
 
