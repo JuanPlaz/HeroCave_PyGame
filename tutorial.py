@@ -104,7 +104,7 @@ class Player(pygame.sprite.Sprite):
 
         if self.hit:
             self.hit_count += 1
-        if self.hit_count > fps * 2:        #This would be 2 seconds.
+        if self.hit_count > fps:        #This would be 1 second
             self.hit = False
 
         self.fall_count += 1
